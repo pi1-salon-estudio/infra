@@ -1,0 +1,56 @@
+# Levanta el sistema completo en local: frontend, backend-api y backend-realtime.
+# Los cuatro repositorios tienen que estar clonados en la misma carpeta (ver README).
+name: pi1-salon-estudio
+
+services:
+  frontend:
+    build:
+      context: ../frontend
+      args:
+        # El navegador corre en tu equipo, no dentro de Docker, así que llama a la API
+        # por el puerto publicado en localhost y no por el nombre del servicio.
+        VITE_API_URL: http://localhost:3000
+    ports:
+      - "8080:80"
+    depends_on:
+      backend-api:
+        condition: service_healthy
+      backend-realtime:
+        condition: service_healthy
+
+  backend-api:
+    build: ../backend-api
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      CORS_ORIGINS: http://localhost:8080,http://localhost:5173
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase_admin
+    secrets:
+      - firebase_admin
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  backend-realtime:
+    build: ../backend-realtime
+    ports:
+      - "4000:4000"
+    environment:
+      PORT: "4000"
+      CORS_ORIGINS: http://localhost:8080,http://localhost:5173
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:4000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+secrets:
+  # La llave de Firebase se monta como archivo de solo lectura en /run/secrets/firebase_admin.
+  # No se copia en ninguna imagen. La ruta en tu equipo va en infra/.env.
+  firebase_admin:
+    file: ${FIREBASE_ADMIN_JSON:?Falta FIREBASE_ADMIN_JSON en infra/.env. Copia .env.example y pon la ruta de la llave}
