@@ -10,6 +10,7 @@ services:
         # El navegador corre en tu equipo, no dentro de Docker, así que llama a la API
         # por el puerto publicado en localhost y no por el nombre del servicio.
         VITE_API_URL: http://localhost:3000
+        VITE_REALTIME_URL: http://localhost:4000
     ports:
       - "8080:80"
     depends_on:
